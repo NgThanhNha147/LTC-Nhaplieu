@@ -1,0 +1,99 @@
+name: ${COMPOSE_PROJECT_NAME:-dynamic-form-platform}
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-dynamic_form}
+      POSTGRES_USER: ${POSTGRES_USER:-dynamic_form}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dynamic_form_dev}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+    networks:
+      - dynamic_form_network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-dynamic_form}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-dynamic_form}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-dynamic_form_dev}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173}
+      DOCUMENT_STORAGE_PATH: ${DOCUMENT_STORAGE_PATH:-/app/data/documents}
+      EXPORT_MAX_ROWS: ${EXPORT_MAX_ROWS:-10000}
+      APP_SECURITY_ENABLED: ${APP_SECURITY_ENABLED:-false}
+      OCR_ENABLED: ${OCR_ENABLED:-false}
+      OCR_SERVICE_URL: ${OCR_SERVICE_URL:-http://ocr:8090}
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+    volumes:
+      - document_data:/app/data/documents
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - dynamic_form_network
+
+  # OCR is isolated from the Java API so OCR workloads cannot block the
+  # application process. The backend can call http://ocr:8090 internally.
+  ocr:
+    build:
+      context: ./ocr
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      OCR_LANGUAGES: ${OCR_LANGUAGES:-vie+eng}
+      OCR_MAX_FILE_BYTES: ${OCR_MAX_FILE_BYTES:-41943040}
+      OCR_TIMEOUT_SECONDS: ${OCR_TIMEOUT_SECONDS:-180}
+      OCR_WORKERS: ${OCR_WORKERS:-2}
+    command: ["sh", "-c", "uvicorn app:app --host 0.0.0.0 --port 8090 --workers $${OCR_WORKERS}"]
+    expose:
+      - "8090"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8090/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - dynamic_form_network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api/v1}
+    restart: unless-stopped
+    environment:
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api/v1}
+    ports:
+      - "${FRONTEND_PORT:-5173}:80"
+    depends_on:
+      - backend
+    networks:
+      - dynamic_form_network
+
+volumes:
+  postgres_data:
+  document_data:
+
+networks:
+  dynamic_form_network:
+    driver: bridge
+

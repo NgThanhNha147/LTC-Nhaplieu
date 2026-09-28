@@ -1,0 +1,58 @@
+# Environment and secrets
+.env
+*.local
+.tunnel/
+
+# IDEs and editors
+.idea/
+.vscode/
+*.iml
+*.swp
+.ui-check/
+
+# Operating systems
+.DS_Store
+Thumbs.db
+
+# Java / Maven / Gradle
+backend/target/
+backend/build/
+backend/.gradle/
+*.class
+*.log
+
+# Node.js
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+*.tsbuildinfo
+frontend/vite.config.js
+frontend/vite.config.d.ts
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Test and coverage output
+coverage/
+test-results/
+
+# Runtime data
+data/
+uploads/
+exports/
+tmp/
+.tools/
+download*
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Generated or packaged output
+.dist/
+*.jar
+*.war
+

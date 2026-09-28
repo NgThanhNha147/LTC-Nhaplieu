@@ -1,0 +1,51 @@
+{
+  "template": {
+    "code": "LAND_CERTIFICATE_DEMO",
+    "name": "Nhập liệu Giấy chứng nhận quyền sử dụng đất",
+    "description": "Nhập và quản lý thông tin Giấy chứng nhận quyền sử dụng đất từ tài liệu PDF hoặc ảnh scan."
+  },
+  "messages": {
+    "minimumValue": "Giá trị phải lớn hơn hoặc bằng mức tối thiểu"
+  },
+  "groups": [
+    { "key": "ISSUE", "code": "ISSUE_INFO", "label": "Thông tin phát hành", "displayOrder": 1, "columnCount": 3, "collapsible": false },
+    { "key": "OWNER1", "code": "OWNER_1", "label": "Chủ sử dụng đất 1 (Chồng)", "displayOrder": 2, "columnCount": 3, "collapsible": false },
+    { "key": "OWNER2", "code": "OWNER_2", "label": "Chủ sử dụng đất 2 (Vợ)", "displayOrder": 3, "columnCount": 3, "collapsible": false },
+    { "key": "LAND", "code": "LAND_MAIN", "label": "Thửa đất chính", "displayOrder": 4, "columnCount": 3, "collapsible": false }
+  ],
+  "fields": [
+    { "group": "ISSUE", "code": "serialNumber", "label": "Số Seria", "dataType": "STRING", "componentType": "TEXT", "gridSpan": 4, "required": true, "maxLength": 50, "searchable": true, "indexed": true, "uniqueValue": true },
+    { "group": "ISSUE", "code": "barcode", "label": "Mã vạch", "dataType": "STRING", "componentType": "TEXT", "gridSpan": 4, "maxLength": 100, "searchable": true, "indexed": true, "uniqueValue": true },
+
+    { "group": "OWNER1", "code": "owner1Name", "label": "Chủ sử dụng đất 1 (Chồng)", "dataType": "STRING", "componentType": "TEXT", "gridSpan": 4, "required": true, "maxLength": 255, "searchable": true, "indexed": true },
+    { "group": "OWNER1", "code": "owner1BirthDate", "label": "Ngày sinh chủ sử dụng đất 1", "dataType": "DATE", "componentType": "DATE", "gridSpan": 4 },
+    { "group": "OWNER1", "code": "owner1DocumentType", "label": "Giấy tờ chủ sử dụng đất 1", "dataType": "LIST", "componentType": "SELECT", "gridSpan": 4, "lookupCode": "DOCUMENT_TYPE" },
+    { "group": "OWNER1", "code": "owner1DocumentNumber", "label": "Số giấy tờ chủ sử dụng đất 1", "dataType": "STRING", "componentType": "TEXT", "gridSpan": 4, "maxLength": 50, "searchable": true, "indexed": true },
+    { "group": "OWNER1", "code": "owner1DocumentIssueDate", "label": "Ngày cấp giấy tờ chủ sử dụng đất 1", "dataType": "DATE", "componentType": "DATE", "gridSpan": 4 },
+    { "group": "OWNER1", "code": "owner1DocumentIssuePlace", "label": "Nơi cấp giấy tờ chủ sử dụng đất 1", "dataType": "STRING", "componentType": "TEXT", "gridSpan": 4, "maxLength": 255 },
+    { "group": "OWNER1", "code": "owner1Address", "label": "Địa chỉ của chủ sử dụng đất 1", "dataType": "TEXTAREA", "componentType": "TEXTAREA", "gridSpan": 8 },
+
+    { "group": "OWNER2", "code": "owner2Name", "label": "Chủ sử dụng đất 2 (Vợ)", "dataType": "STRING", "componentType": "TEXT", "gridSpan": 4, "maxLength": 255, "searchable": true, "indexed": true },
+    { "group": "OWNER2", "code": "owner2BirthDate", "label": "Ngày sinh chủ sử dụng đất 2", "dataType": "DATE", "componentType": "DATE", "gridSpan": 4 },
+    { "group": "OWNER2", "code": "owner2DocumentType", "label": "Giấy tờ chủ sử dụng đất 2", "dataType": "LIST", "componentType": "SELECT", "gridSpan": 4, "lookupCode": "DOCUMENT_TYPE" },
+    { "group": "OWNER2", "code": "owner2DocumentNumber", "label": "Số giấy tờ chủ sử dụng đất 2", "dataType": "STRING", "componentType": "TEXT", "gridSpan": 4, "maxLength": 50, "searchable": true, "indexed": true },
+    { "group": "OWNER2", "code": "owner2DocumentIssueDate", "label": "Ngày cấp giấy tờ chủ sử dụng đất 2", "dataType": "DATE", "componentType": "DATE", "gridSpan": 4 },
+    { "group": "OWNER2", "code": "owner2DocumentIssuePlace", "label": "Nơi cấp giấy tờ chủ sử dụng đất 2", "dataType": "STRING", "componentType": "TEXT", "gridSpan": 4, "maxLength": 255 },
+    { "group": "OWNER2", "code": "owner2Address", "label": "Địa chỉ của chủ sử dụng đất 2", "dataType": "TEXTAREA", "componentType": "TEXTAREA", "gridSpan": 8 },
+
+    { "group": "LAND", "code": "parcelNumber", "label": "Thửa đất", "dataType": "STRING", "componentType": "TEXT", "gridSpan": 4, "required": true, "maxLength": 50, "searchable": true, "indexed": true },
+    { "group": "LAND", "code": "mapSheetNumber", "label": "Tờ bản đồ", "dataType": "STRING", "componentType": "TEXT", "gridSpan": 4, "required": true, "maxLength": 50, "searchable": true, "indexed": true },
+    { "group": "LAND", "code": "totalArea", "label": "Diện tích", "dataType": "DECIMAL", "componentType": "NUMBER", "gridSpan": 4, "required": true, "precision": 18, "scale": 2, "minValue": "0.01" },
+    { "group": "LAND", "code": "landType1", "label": "Loại đất 1", "dataType": "LIST", "componentType": "SELECT", "gridSpan": 4, "required": true, "lookupCode": "LAND_TYPE", "searchable": true, "indexed": true },
+    { "group": "LAND", "code": "landType1Area", "label": "Diện tích loại đất 1", "dataType": "DECIMAL", "componentType": "NUMBER", "gridSpan": 4, "precision": 18, "scale": 2, "minValue": "0" },
+    { "group": "LAND", "code": "landUseTerm1", "label": "Thời hạn sử dụng loại đất 1", "dataType": "STRING", "componentType": "TEXT", "gridSpan": 4, "maxLength": 255 }
+    ,
+    { "group": "LAND", "code": "landUseForm1", "label": "Hình thức sử dụng LĐ1", "dataType": "STRING", "componentType": "TEXT", "gridSpan": 4, "maxLength": 255 },
+    { "group": "LAND", "code": "landType2", "label": "Loại đất 2", "dataType": "LIST", "componentType": "SELECT", "gridSpan": 4, "lookupCode": "LAND_TYPE", "searchable": true, "indexed": true },
+    { "group": "LAND", "code": "landType2Area", "label": "Diện tích loại đất 2", "dataType": "DECIMAL", "componentType": "NUMBER", "gridSpan": 4, "precision": 18, "scale": 2, "minValue": "0" },
+    { "group": "LAND", "code": "landUseTerm2", "label": "Thời hạn sử dụng loại đất 2", "dataType": "STRING", "componentType": "TEXT", "gridSpan": 4, "maxLength": 255 },
+    { "group": "LAND", "code": "landUseForm2", "label": "Hình thức sử dụng LĐ2", "dataType": "STRING", "componentType": "TEXT", "gridSpan": 4, "maxLength": 255 },
+    { "group": "LAND", "code": "landAddress", "label": "Địa chỉ thửa đất", "dataType": "TEXTAREA", "componentType": "TEXTAREA", "gridSpan": 8, "maxLength": 2000, "searchable": true },
+    { "group": "LAND", "code": "landOrigin", "label": "Nguồn gốc thửa đất", "dataType": "TEXTAREA", "componentType": "TEXTAREA", "gridSpan": 8, "maxLength": 2000, "searchable": true }
+  ]
+}

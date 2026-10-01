@@ -28,7 +28,19 @@ jobs:
         with:
           languages: ${{ matrix.language }}
           queries: security-extended
-      - name: Build analyzed source
+      - name: Set up Java
+        if: matrix.language == 'java-kotlin'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      - name: Build Java source
+        if: matrix.language == 'java-kotlin'
+        working-directory: backend
+        run: mvn --batch-mode --no-transfer-progress clean package -DskipTests
+      - name: Build JavaScript/TypeScript source
+        if: matrix.language == 'javascript-typescript'
         uses: github/codeql-action/autobuild@v3
       - name: Analyze
         uses: github/codeql-action/analyze@v3

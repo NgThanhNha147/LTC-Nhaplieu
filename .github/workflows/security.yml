@@ -39,7 +39,9 @@ jobs:
           scanners: vuln,secret,misconfig
           severity: HIGH,CRITICAL
           ignore-unfixed: true
-          skip-dirs: .git,.tools,.ui-check,backups,frontend/node_modules,frontend/dist,backend/target
+          skip-dirs: .git,.dist,.tools,.ui-check,backups,frontend/node_modules,frontend/dist,backend/target
+          # Backend dependencies are scanned from the built application image.
+          skip-files: backend/pom.xml
           exit-code: "1"
           format: sarif
           output: trivy-results.sarif
@@ -167,7 +169,7 @@ jobs:
           scan-type: fs
           scan-ref: .
           scanners: vuln
-          skip-dirs: .git,.tools,.ui-check,backups,frontend/node_modules,frontend/dist,backend/target
+          skip-dirs: .git,.dist,.tools,.ui-check,backups,frontend/node_modules,frontend/dist,backend/target
           format: cyclonedx
           output: ltc-nhaplieu-sbom.cdx.json
           exit-code: "0"

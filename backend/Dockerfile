@@ -8,7 +8,10 @@ RUN mvn -B -q clean package
 FROM eclipse-temurin:21-jre
 WORKDIR /app
 # OCR runs in a separate container; keep the Java API image small.
-RUN useradd --system --uid 10001 appuser \
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && rm -rf /var/lib/apt/lists/* \
+    && useradd --system --uid 10001 appuser \
     && mkdir -p /app/data/documents \
     && chown -R appuser /app
 COPY --from=build /workspace/target/dynamic-form-backend-*.jar app.jar

@@ -108,7 +108,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build ${{ matrix.image }}
-        run: docker build -t "${{ matrix.image }}" "${{ matrix.context }}"
+        run: docker build --pull -t "${{ matrix.image }}" "${{ matrix.context }}"
       - name: Scan ${{ matrix.image }}
         uses: aquasecurity/trivy-action@v0.36.0
         with:

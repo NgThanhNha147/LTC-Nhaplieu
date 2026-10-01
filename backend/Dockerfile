@@ -5,7 +5,7 @@ RUN mvn -B -q dependency:go-offline
 COPY src src
 RUN mvn -B -q clean package
 
-FROM eclipse-temurin:21-jre
+FROM eclipse-temurin:25-jre
 WORKDIR /app
 # OCR runs in a separate container; keep the Java API image small.
 RUN apt-get update \

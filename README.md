@@ -83,7 +83,7 @@ Tạo file `.env` từ mẫu:
 Copy-Item .env.example .env
 ```
 
-Đổi `POSTGRES_PASSWORD` trước khi dùng ngoài máy phát triển. File `.env` đã được bỏ qua bởi Git.
+Đổi `POSTGRES_PASSWORD`, `JWT_SECRET` và `INITIAL_ADMIN_PASSWORD` trước khi khởi động môi trường mới. Bảo mật được bật mặc định; tài khoản quản trị khởi tạo buộc phải đổi mật khẩu sau lần đăng nhập đầu tiên. File `.env` đã được bỏ qua bởi Git.
 
 Các cổng mặc định:
 

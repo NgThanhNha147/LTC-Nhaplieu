@@ -242,3 +242,90 @@ export interface ApiErrorBody {
   message?: string;
   fieldErrors?: Array<{ field: string; code?: string; message: string }>;
 }
+
+export type WorkItemStatus = "UNPROCESSED" | "DRAFT" | "PENDING_APPROVAL" | "APPROVED" | "REJECTED";
+export type BatchSourceType = "ZIP" | "FOLDER" | "MULTI_FILE";
+
+export interface WorkflowCounters {
+  total: number;
+  unprocessed: number;
+  draft: number;
+  pendingApproval: number;
+  approved: number;
+  rejected: number;
+  deleted?: number;
+}
+
+export interface IngestionBatch {
+  id: string;
+  batchCode: string;
+  batchName: string;
+  templateId?: string;
+  templateCode: string;
+  templateName: string;
+  templateVersionId?: string;
+  templateVersion?: number;
+  sourceType?: BatchSourceType;
+  originalName?: string;
+  assignedUserId?: string;
+  assignedUsername?: string;
+  assignedDisplayName?: string;
+  description?: string;
+  status?: string;
+  counters: WorkflowCounters;
+  createdAt?: string;
+  updatedAt?: string;
+  archivedAt?: string;
+  rowVersion?: number;
+}
+
+export interface WorkItem {
+  id: string;
+  batchId: string;
+  batchCode: string;
+  batchName: string;
+  templateCode: string;
+  templateName: string;
+  templateVersion?: number;
+  sequenceNo: number;
+  totalInBatch?: number;
+  documentId?: string;
+  documentUrl?: string;
+  documentName: string;
+  relativePath?: string;
+  fileSize?: number;
+  status: WorkItemStatus;
+  assignedUserId?: string;
+  assignedUsername?: string;
+  assignedDisplayName?: string;
+  dynamicRecordId?: string;
+  data?: Record<string, unknown>;
+  rejectionReason?: string;
+  submittedAt?: string;
+  submittedBy?: string;
+  approvedAt?: string;
+  approvedBy?: string;
+  rejectedAt?: string;
+  rejectedBy?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  deleted?: boolean;
+  rowVersion?: number;
+  dynamicRowVersion?: number;
+  previousId?: string;
+  nextId?: string;
+}
+
+export interface WorkItemSearch {
+  batchId?: string;
+  status?: WorkItemStatus;
+  statuses?: WorkItemStatus[];
+  assignedUserId?: string;
+  keyword?: string;
+  fromDate?: string;
+  toDate?: string;
+  deleted?: boolean;
+  mine?: boolean;
+  page?: number;
+  size?: number;
+}

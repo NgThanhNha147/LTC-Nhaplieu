@@ -9,7 +9,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-dynamic_form}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dynamic_form_dev}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "${POSTGRES_BIND_ADDRESS:-127.0.0.1}:${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -36,13 +36,27 @@ services:
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173}
       DOCUMENT_STORAGE_PATH: ${DOCUMENT_STORAGE_PATH:-/app/data/documents}
       EXPORT_MAX_ROWS: ${EXPORT_MAX_ROWS:-10000}
-      APP_SECURITY_ENABLED: ${APP_SECURITY_ENABLED:-false}
+      APP_SECURITY_ENABLED: ${APP_SECURITY_ENABLED:-true}
+      JWT_SECRET: ${JWT_SECRET:-local-development-secret-change-before-production-2026}
+      JWT_ACCESS_TOKEN_MINUTES: ${JWT_ACCESS_TOKEN_MINUTES:-15}
+      JWT_REFRESH_TOKEN_DAYS: ${JWT_REFRESH_TOKEN_DAYS:-7}
+      JWT_REFRESH_COOKIE_SECURE: ${JWT_REFRESH_COOKIE_SECURE:-false}
+      INITIAL_ADMIN_ENABLED: ${INITIAL_ADMIN_ENABLED:-false}
+      INITIAL_ADMIN_USERNAME: ${INITIAL_ADMIN_USERNAME:-admin}
+      INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD:-ChangeMe123!}
+      INITIAL_ADMIN_DISPLAY_NAME: ${INITIAL_ADMIN_DISPLAY_NAME:-Quan tri he thong}
       OCR_ENABLED: ${OCR_ENABLED:-false}
       OCR_SERVICE_URL: ${OCR_SERVICE_URL:-http://ocr:8090}
     ports:
       - "${BACKEND_PORT:-8080}:8080"
     volumes:
       - document_data:/app/data/documents
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://localhost:8080/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
     depends_on:
       postgres:
         condition: service_healthy
@@ -79,13 +93,16 @@ services:
       dockerfile: Dockerfile
       args:
         VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api/v1}
+        VITE_SECURITY_ENABLED: ${VITE_SECURITY_ENABLED:-true}
     restart: unless-stopped
     environment:
       VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api/v1}
+      VITE_SECURITY_ENABLED: ${VITE_SECURITY_ENABLED:-true}
     ports:
-      - "${FRONTEND_PORT:-5173}:80"
+      - "${FRONTEND_PORT:-5173}:8080"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     networks:
       - dynamic_form_network
 

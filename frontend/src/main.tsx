@@ -7,6 +7,7 @@ import viVN from "antd/locale/vi_VN";
 import dayjs from "dayjs";
 import "dayjs/locale/vi";
 import App from "./App";
+import { AuthProvider } from "./auth/AuthProvider";
 import "@fontsource/be-vietnam-pro/400.css";
 import "@fontsource/be-vietnam-pro/500.css";
 import "@fontsource/be-vietnam-pro/600.css";
@@ -62,9 +63,11 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
     >
       <AntApp>
         <QueryClientProvider client={queryClient}>
-          <BrowserRouter>
-            <App />
-          </BrowserRouter>
+          <AuthProvider>
+            <BrowserRouter>
+              <App />
+            </BrowserRouter>
+          </AuthProvider>
         </QueryClientProvider>
       </AntApp>
     </ConfigProvider>

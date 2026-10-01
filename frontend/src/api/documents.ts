@@ -1,3 +1,5 @@
+import { apiClient, unwrap } from "./client";
+
 const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || "/api/v1").replace(/\/$/, "");
 
 export interface UploadedDocument {
@@ -21,33 +23,29 @@ export const documentApi = {
   async upload(file: File): Promise<UploadedDocument> {
     const body = new FormData();
     body.append("file", file);
-    const response = await fetch(`${apiBaseUrl}/documents`, { method: "POST", body });
-    if (!response.ok) {
-      const error = await response.json().catch(() => undefined) as { message?: string } | undefined;
-      throw new Error(error?.message || "Không thể tải tài liệu lên");
-    }
-    return response.json() as Promise<UploadedDocument>;
+    const response = await apiClient.post("/documents", body, { headers: { "Content-Type": "multipart/form-data" } });
+    return unwrap<UploadedDocument>(response.data);
   },
   contentUrl(id: string): string {
     return `${apiBaseUrl}/documents/${encodeURIComponent(id)}/content`;
+  },
+  async contentObjectUrl(id: string): Promise<{ url: string; contentType: string }> {
+    const response = await apiClient.get(`/documents/${encodeURIComponent(id)}/content`, { responseType: "blob" });
+    const contentType = String(response.headers["content-type"] || response.data.type || "application/octet-stream");
+    return { url: URL.createObjectURL(response.data), contentType };
   },
   idFromContentUrl(url: string): string | undefined {
     const match = url.match(/\/documents\/([^/]+)\/content(?:$|[?#])/);
     return match?.[1] ? decodeURIComponent(match[1]) : undefined;
   },
   async ocrStatus(id: string): Promise<OcrStatus> {
-    const response = await fetch(`${apiBaseUrl}/documents/${encodeURIComponent(id)}/ocr`, { credentials: "same-origin" });
-    if (!response.ok) throw new Error("Chưa có trạng thái OCR cho tài liệu này.");
-    const value = await response.json() as OcrStatus;
+    const response = await apiClient.get(`/documents/${encodeURIComponent(id)}/ocr`);
+    const value = unwrap<OcrStatus>(response.data);
     return { ...value, ocrContentUrl: value.ocrContentUrl || value.ocrPdfUrl };
   },
   async startOcr(id: string): Promise<OcrStatus> {
-    const response = await fetch(`${apiBaseUrl}/documents/${encodeURIComponent(id)}/ocr`, { method: "POST", credentials: "same-origin" });
-    if (!response.ok) {
-      const error = await response.json().catch(() => undefined) as { message?: string } | undefined;
-      throw new Error(error?.message || "Không thể nhận dạng văn bản");
-    }
-    const value = await response.json() as OcrStatus;
+    const response = await apiClient.post(`/documents/${encodeURIComponent(id)}/ocr`);
+    const value = unwrap<OcrStatus>(response.data);
     return { ...value, ocrContentUrl: value.ocrContentUrl || value.ocrPdfUrl };
   },
 };

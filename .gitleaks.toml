@@ -1,0 +1,9 @@
+title = "LTC Nhap lieu Gitleaks configuration"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Documented local-only placeholder credentials"
+paths = ['''\.env\.example$''']
+regexes = ['''change_me_in_real_environments''', '''dynamic_form_dev''']

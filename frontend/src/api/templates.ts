@@ -121,6 +121,10 @@ export const templateApi = {
     const { data } = await apiClient.get(`/forms/${encodeURIComponent(code)}`);
     return unwrap(data);
   },
+  async formVersion(code: string, versionNo: number): Promise<FormMetadata> {
+    const { data } = await apiClient.get(`/forms/${encodeURIComponent(code)}/versions/${versionNo}`);
+    return unwrap(data);
+  },
   async lookupSources(): Promise<LookupSource[]> {
     try {
       const { data } = await apiClient.get("/lookup-sources");

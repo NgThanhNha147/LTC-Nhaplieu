@@ -11,12 +11,17 @@ import { templateApi } from "../api/templates";
 import { DocumentViewer } from "../components/DocumentViewer";
 import { DynamicFormRenderer } from "../components/DynamicFormRenderer";
 import { PageError } from "../components/ApiState";
+import { useAuth } from "../auth/AuthProvider";
+import { Can } from "../auth/Can";
+import { Permissions } from "../auth/permissions";
 
 export function DataEntryPage() {
   const { templateCode = "", recordId } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const compareMode = searchParams.get("mode") === "compare" && Boolean(recordId);
+  const { hasPermission } = useAuth();
+  const canUpdate = hasPermission(Permissions.RECORD_UPDATE);
+  const compareMode = Boolean(recordId) && (searchParams.get("mode") === "compare" || !canUpdate);
   const queryClient = useQueryClient();
   const { message } = App.useApp();
   const [documentUrl, setDocumentUrl] = useState<string>();
@@ -113,10 +118,10 @@ export function DataEntryPage() {
             <Button className="compare-nav-button" type="text" icon={<LeftOutlined />} disabled={!previousRecord} title="Hồ sơ trước" aria-label="Hồ sơ trước" onClick={() => openCompareRecord(previousRecord?.id)} />
             <span className="compare-position">{comparePosition}</span>
             <Button className="compare-nav-button" type="text" icon={<RightOutlined />} disabled={!nextRecord} title="Hồ sơ sau" aria-label="Hồ sơ sau" onClick={() => openCompareRecord(nextRecord?.id)} />
-            <Button type="primary" icon={<EditOutlined />} onClick={() => navigate(editUrl)}>Chỉnh sửa</Button>
+            <Can permission={Permissions.RECORD_UPDATE}><Button type="primary" icon={<EditOutlined />} onClick={() => navigate(editUrl)}>Chỉnh sửa</Button></Can>
           </Space>
         ) : (
-          <Space wrap><Button icon={<SaveOutlined />} loading={saveMutation.isPending} onClick={saveDraft}>Lưu nháp</Button><Button type="primary" icon={<CheckOutlined />} loading={saveMutation.isPending} onClick={() => void submitCompleted()}>Hoàn tất nhập liệu</Button></Space>
+          <Space wrap><Button icon={<SaveOutlined />} loading={saveMutation.isPending} onClick={saveDraft}>Lưu nháp</Button><Can permission={Permissions.RECORD_COMPLETE}><Button type="primary" icon={<CheckOutlined />} loading={saveMutation.isPending} onClick={() => void submitCompleted()}>Hoàn tất nhập liệu</Button></Can></Space>
         )}
       </div>
       <div className="entry-workspace">
@@ -130,10 +135,10 @@ export function DataEntryPage() {
                 <span>{comparePosition}</span>
                 <Button icon={<RightOutlined />} disabled={!nextRecord} onClick={() => openCompareRecord(nextRecord?.id)}>Hồ sơ sau</Button>
               </div>
-              <Button block type="primary" icon={<EditOutlined />} onClick={() => navigate(editUrl)}>Chỉnh sửa hồ sơ</Button>
+              <Can permission={Permissions.RECORD_UPDATE}><Button block type="primary" icon={<EditOutlined />} onClick={() => navigate(editUrl)}>Chỉnh sửa hồ sơ</Button></Can>
             </div>
           ) : (
-            <div className="mobile-entry-actions"><Button block icon={<SaveOutlined />} loading={saveMutation.isPending} onClick={saveDraft}>Lưu nháp</Button><Button block type="primary" icon={<CheckOutlined />} loading={saveMutation.isPending} onClick={() => void submitCompleted()}>Hoàn tất nhập liệu</Button></div>
+            <div className="mobile-entry-actions"><Button block icon={<SaveOutlined />} loading={saveMutation.isPending} onClick={saveDraft}>Lưu nháp</Button><Can permission={Permissions.RECORD_COMPLETE}><Button block type="primary" icon={<CheckOutlined />} loading={saveMutation.isPending} onClick={() => void submitCompleted()}>Hoàn tất nhập liệu</Button></Can></div>
           )}
           {!compareMode && isDirty && <div className="unsaved-indicator">Có thay đổi chưa lưu</div>}
         </main>

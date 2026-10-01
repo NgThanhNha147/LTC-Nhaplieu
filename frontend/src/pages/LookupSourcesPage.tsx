@@ -29,6 +29,8 @@ import { getErrorMessage } from "../api/client";
 import { lookupApi } from "../api/lookups";
 import { PageError, PageLoading } from "../components/ApiState";
 import type { LookupSource, LookupSourcePayload } from "../types";
+import { Can } from "../auth/Can";
+import { Permissions } from "../auth/permissions";
 
 const emptyLookup: LookupSourcePayload = {
   code: "",
@@ -112,7 +114,7 @@ export function LookupSourcesPage() {
     <div className="page-stack lookup-page">
       <div className="toolbar surface-card management-toolbar">
         <Input allowClear prefix={<SearchOutlined />} placeholder="Tìm theo tên, mã hoặc bảng nguồn..." value={search} onChange={(event) => setSearch(event.target.value)} />
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => openForm()}>Thêm danh mục</Button>
+        <Can permission={Permissions.LOOKUP_MANAGE}><Button type="primary" icon={<PlusOutlined />} onClick={() => openForm()}>Thêm danh mục</Button></Can>
       </div>
 
       <Card className="lookup-table-card" styles={{ body: { padding: 0 } }}>
@@ -140,10 +142,10 @@ export function LookupSourcesPage() {
               width: 250,
               render: (_, source) => <Space size={2}>
                 <Button type="text" icon={<EyeOutlined />} onClick={() => { setPreviewQuery(""); setPreview(source); }}>Xem giá trị</Button>
-                <Button type="text" icon={<EditOutlined />} onClick={() => openForm(source)}>Sửa</Button>
-                <Popconfirm title="Xóa danh mục này?" description="Không thể xóa nếu danh mục đang được một trường dữ liệu sử dụng." onConfirm={() => removeMutation.mutate(source.id)}>
+                <Can permission={Permissions.LOOKUP_MANAGE}><Button type="text" icon={<EditOutlined />} onClick={() => openForm(source)}>Sửa</Button></Can>
+                <Can permission={Permissions.LOOKUP_MANAGE}><Popconfirm title="Xóa danh mục này?" description="Không thể xóa nếu danh mục đang được một trường dữ liệu sử dụng." onConfirm={() => removeMutation.mutate(source.id)}>
                   <Button danger type="text" icon={<DeleteOutlined />} />
-                </Popconfirm>
+                </Popconfirm></Can>
               </Space>,
             },
           ]}

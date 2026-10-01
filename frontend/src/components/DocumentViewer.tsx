@@ -2,6 +2,8 @@ import { FileImageOutlined, FilePdfOutlined, InboxOutlined } from "@ant-design/i
 import { App, Button, Popconfirm, Upload } from "antd";
 import { useEffect, useState } from "react";
 import { documentApi } from "../api/documents";
+import { useAuth } from "../auth/AuthProvider";
+import { Permissions } from "../auth/permissions";
 
 export function DocumentViewer({
   initialUrl,
@@ -13,14 +15,32 @@ export function DocumentViewer({
   readOnly?: boolean;
 }) {
   const { message } = App.useApp();
+  const { hasPermission } = useAuth();
+  const canUpload = hasPermission(Permissions.DOCUMENT_UPLOAD);
+  const canView = hasPermission(Permissions.DOCUMENT_VIEW);
   const [url, setUrl] = useState(initialUrl ?? "");
+  const [contentType, setContentType] = useState("");
   const [uploading, setUploading] = useState(false);
 
-  useEffect(() => setUrl(initialUrl ?? ""), [initialUrl]);
+  useEffect(() => {
+    let objectUrl: string | undefined;
+    const documentId = initialUrl ? documentApi.idFromContentUrl(initialUrl) : undefined;
+    if (!documentId) {
+      setUrl(initialUrl ?? "");
+      setContentType(initialUrl?.toLowerCase().includes(".pdf") ? "application/pdf" : "");
+      return undefined;
+    }
+    setUrl("");
+    void documentApi.contentObjectUrl(documentId).then((content) => {
+      objectUrl = content.url;
+      setContentType(content.contentType);
+      setUrl(content.url);
+    }).catch(() => message.error("Không thể tải tài liệu nguồn"));
+    return () => { if (objectUrl) URL.revokeObjectURL(objectUrl); };
+  }, [initialUrl, message]);
 
-  const isPdf = url.toLowerCase().includes(".pdf")
+  const isPdf = contentType.includes("application/pdf") || url.toLowerCase().includes(".pdf")
     || url.startsWith("data:application/pdf")
-    || url.startsWith("blob:")
     || url.includes("/documents/");
 
   const removeDocument = () => {
@@ -35,7 +55,7 @@ export function DocumentViewer({
           <strong>{url && (isPdf ? <FilePdfOutlined /> : <FileImageOutlined />)} Tài liệu nguồn</strong>
           {!url && <small>Chưa có tài liệu</small>}
         </div>
-        {url && !readOnly && (
+        {url && !readOnly && canUpload && (
           <Popconfirm
             title="Gỡ tài liệu khỏi hồ sơ?"
             description="Thay đổi được ghi nhận khi bạn lưu hồ sơ."
@@ -46,7 +66,13 @@ export function DocumentViewer({
         )}
       </div>
 
-      {!url && readOnly ? (
+      {!canView && url ? (
+        <div className="document-empty read-only-empty">
+          <FileImageOutlined />
+          <strong>Bạn chưa được cấp quyền xem tài liệu</strong>
+          <p>Liên hệ quản trị viên nếu bạn cần đối chiếu tài liệu nguồn.</p>
+        </div>
+      ) : !url && (readOnly || !canUpload) ? (
         <div className="document-empty read-only-empty">
           <FileImageOutlined />
           <strong>Chưa có tài liệu đối chiếu</strong>
@@ -63,7 +89,9 @@ export function DocumentViewer({
               try {
                 const uploaded = await documentApi.upload(file);
                 onDocumentIdChange?.(uploaded.id);
-                setUrl(documentApi.contentUrl(uploaded.id));
+                const content = await documentApi.contentObjectUrl(uploaded.id);
+                setContentType(content.contentType || uploaded.contentType);
+                setUrl(content.url);
                 message.success("Đã tải tài liệu lên");
               } catch (error) {
                 message.error(error instanceof Error ? error.message : "Không thể tải tài liệu lên");

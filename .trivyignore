@@ -1,0 +1,2 @@
+# Add only reviewed, time-limited exceptions with a ticket reference.
+# CVE-YYYY-NNNN exp:2026-12-31 SEC-123 false positive

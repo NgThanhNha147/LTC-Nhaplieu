@@ -8,6 +8,9 @@ import { getErrorMessage } from "../api/client";
 import { PageError, PageLoading } from "../components/ApiState";
 import { StatusTag } from "../components/StatusTag";
 import type { TemplateSummary } from "../types";
+import { Can } from "../auth/Can";
+import { useAuth } from "../auth/AuthProvider";
+import { Permissions } from "../auth/permissions";
 
 interface TemplateFormValue {
   code: string;
@@ -27,6 +30,7 @@ function toTemplateCode(value: string): string {
 
 export function TemplatesPage() {
   const navigate = useNavigate();
+  const { hasPermission } = useAuth();
   const queryClient = useQueryClient();
   const { message, modal } = App.useApp();
   const [form] = Form.useForm<TemplateFormValue>();
@@ -71,11 +75,11 @@ export function TemplatesPage() {
     <div className="page-stack">
       <div className="toolbar surface-card management-toolbar">
         <Input allowClear prefix={<SearchOutlined />} placeholder="Tìm theo tên hoặc mã biểu mẫu..." value={search} onChange={(event) => setSearch(event.target.value)} />
-        <Button type="primary" icon={<PlusOutlined />} onClick={showCreate}>Tạo biểu mẫu</Button>
+        <Can permission={Permissions.TEMPLATE_CREATE}><Button type="primary" icon={<PlusOutlined />} onClick={showCreate}>Tạo biểu mẫu</Button></Can>
       </div>
 
       {filtered.length === 0 ? (
-        <div className="surface-card"><Empty description="Chưa có biểu mẫu phù hợp"><Button type="primary" onClick={showCreate}>Tạo biểu mẫu đầu tiên</Button></Empty></div>
+        <div className="surface-card"><Empty description="Chưa có biểu mẫu phù hợp"><Can permission={Permissions.TEMPLATE_CREATE}><Button type="primary" onClick={showCreate}>Tạo biểu mẫu đầu tiên</Button></Can></Empty></div>
       ) : (
         <Row gutter={[18, 18]}>
           {filtered.map((item) => (
@@ -85,16 +89,18 @@ export function TemplatesPage() {
                   <StatusTag status={item.status} />
                   <Dropdown trigger={["click"]} menu={{ items: [
                     { key: "data", icon: <FormOutlined />, label: "Xem hồ sơ", onClick: () => navigate(`/workspaces/${item.code}`) },
-                    { key: "edit", icon: <EditOutlined />, label: "Sửa tên và mô tả", onClick: () => showEdit(item) },
-                    { type: "divider" },
-                    { key: "delete", danger: true, icon: <DeleteOutlined />, label: "Xóa biểu mẫu", onClick: () => modal.confirm({ title: "Xóa biểu mẫu này?", content: "Chỉ có thể xóa biểu mẫu chưa phát sinh dữ liệu.", okText: "Xóa", okButtonProps: { danger: true }, onOk: () => deleteMutation.mutateAsync(item.id) }) },
+                    ...(hasPermission(Permissions.TEMPLATE_CONFIGURE) ? [
+                      { key: "edit", icon: <EditOutlined />, label: "Sửa tên và mô tả", onClick: () => showEdit(item) },
+                      { type: "divider" as const },
+                      { key: "delete", danger: true, icon: <DeleteOutlined />, label: "Xóa biểu mẫu", onClick: () => modal.confirm({ title: "Xóa biểu mẫu này?", content: "Chỉ có thể xóa biểu mẫu chưa phát sinh dữ liệu.", okText: "Xóa", okButtonProps: { danger: true }, onOk: () => deleteMutation.mutateAsync(item.id) }) },
+                    ] : []),
                   ] }}>
                     <Button type="text" icon={<MoreOutlined />} aria-label="Thêm thao tác" />
                   </Dropdown>
                 </div>
                 <h2>{item.name}</h2>
                 <p>{item.description || "Chưa có mô tả cho biểu mẫu này."}</p>
-                <Button block type="primary" icon={<EditOutlined />} onClick={() => navigate(`/templates/${item.id}/designer`)}>Cấu hình biểu mẫu</Button>
+                <Can permission={Permissions.TEMPLATE_CONFIGURE}><Button block type="primary" icon={<EditOutlined />} onClick={() => navigate(`/templates/${item.id}/designer`)}>Cấu hình biểu mẫu</Button></Can>
               </Card>
             </Col>
           ))}

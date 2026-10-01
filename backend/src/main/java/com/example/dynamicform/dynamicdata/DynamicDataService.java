@@ -41,7 +41,17 @@ public class DynamicDataService {
     @Transactional
     public DynamicRecord create(String templateCode, CreateRecordRequest request) {
         operationLock.lockForDataChange(templateCode);
-        Context ctx = context(templateCode);
+        return create(context(templateCode), request);
+    }
+
+    @Transactional
+    public DynamicRecord createForVersion(UUID templateVersionId, CreateRecordRequest request) {
+        Context ctx = context(templateVersionId);
+        operationLock.lockForDataChange(ctx.version().getTemplate().getCode());
+        return create(ctx, request);
+    }
+
+    private DynamicRecord create(Context ctx, CreateRecordRequest request) {
         String status = normalizeStatus(request.status());
         Map<String, Object> data = validator.validateAndConvert(writablePayload(request.data(), ctx.fields()),
                 ctx.fields(), ctx.rules(), "COMPLETED".equals(status));
@@ -62,10 +72,26 @@ public class DynamicDataService {
     @Transactional(readOnly = true)
     public DynamicRecord get(String templateCode, UUID id) { return get(context(templateCode), id); }
 
+    @Transactional(readOnly = true)
+    public DynamicRecord getForVersion(UUID templateVersionId, UUID id) { return get(context(templateVersionId), id); }
+
     @Transactional
     public DynamicRecord update(String templateCode, UUID id, UpdateRecordRequest request) {
         operationLock.lockForDataChange(templateCode);
-        Context ctx = context(templateCode); DynamicRecord old = get(ctx, id);
+        Context ctx = context(templateCode);
+        assertWorkflowEditable(ctx.version().getId(), id);
+        return update(ctx, id, request);
+    }
+
+    @Transactional
+    public DynamicRecord updateForVersion(UUID templateVersionId, UUID id, UpdateRecordRequest request) {
+        Context ctx = context(templateVersionId);
+        operationLock.lockForDataChange(ctx.version().getTemplate().getCode());
+        return update(ctx, id, request);
+    }
+
+    private DynamicRecord update(Context ctx, UUID id, UpdateRecordRequest request) {
+        DynamicRecord old = get(ctx, id);
         String status = normalizeStatus(request.status());
         Map<String, Object> merged = new LinkedHashMap<>(old.data());
         merged.putAll(writablePayload(request.data(), ctx.fields()));
@@ -86,7 +112,9 @@ public class DynamicDataService {
     @Transactional
     public void delete(String templateCode, UUID id, Long rowVersion) {
         operationLock.lockForDataChange(templateCode);
-        Context ctx = context(templateCode); DynamicRecord old = get(ctx, id);
+        Context ctx = context(templateCode);
+        assertWorkflowEditable(ctx.version().getId(), id);
+        DynamicRecord old = get(ctx, id);
         long expectedVersion = rowVersion == null ? old.rowVersion() : rowVersion;
         int changed = jdbc.update("UPDATE " + ctx.qualifiedTable() + " SET deleted=TRUE,updated_at=:now,updated_by=:user,row_version=row_version+1 WHERE id=:id AND row_version=:version AND deleted=FALSE",
                 new MapSqlParameterSource().addValue("now", Timestamp.from(Instant.now())).addValue("user", currentUser.username()).addValue("id", id).addValue("version", expectedVersion));
@@ -184,6 +212,18 @@ public class DynamicDataService {
         return new Context(version, fields, rules);
     }
 
+    public Context context(UUID versionId) {
+        TemplateVersion version = versions.findById(versionId)
+                .orElseThrow(() -> ApiException.notFound("Không tìm thấy phiên bản biểu mẫu của đợt hồ sơ."));
+        if (version.getPhysicalSchema() == null || version.getPhysicalTable() == null
+                || "PURGED".equalsIgnoreCase(version.getStorageStatus())) {
+            throw ApiException.conflict("Phiên bản biểu mẫu của đợt chưa có bảng dữ liệu hoặc đã bị xóa lưu trữ.");
+        }
+        List<FieldDefinition> fields = fieldRepository.findByTemplateVersionIdOrderByDisplayOrderAsc(version.getId());
+        List<ValidationRule> rules = ruleRepository.findByFieldIdIn(fields.stream().map(FieldDefinition::getId).toList());
+        return new Context(version, fields, rules);
+    }
+
     private DynamicRecord get(Context ctx, UUID id) {
         List<DynamicRecord> rows = jdbc.query("SELECT * FROM " + ctx.qualifiedTable() + " WHERE id=:id AND deleted=FALSE",
                 new MapSqlParameterSource("id", id), (rs, n) -> mapRecord(rs, ctx.fields()));
@@ -271,6 +311,21 @@ public class DynamicDataService {
         Map<String, Object> writable = new LinkedHashMap<>(payload);
         readOnlyCodes.forEach(writable::remove);
         return writable;
+    }
+
+    private void assertWorkflowEditable(UUID templateVersionId, UUID recordId) {
+        Long locked = jdbc.queryForObject("""
+                SELECT COUNT(*)
+                FROM app_meta.batch_document d
+                JOIN app_meta.ingestion_batch b ON b.id = d.batch_id
+                WHERE b.template_version_id = :versionId
+                  AND d.dynamic_record_id = :recordId
+                  AND d.deleted = FALSE
+                  AND d.workflow_status IN ('PENDING_APPROVAL', 'APPROVED')
+                """, new MapSqlParameterSource().addValue("versionId", templateVersionId).addValue("recordId", recordId), Long.class);
+        if (locked != null && locked > 0) {
+            throw ApiException.conflict("Hồ sơ đang chờ duyệt hoặc đã duyệt. Hãy thao tác trong quy trình phê duyệt của đợt hồ sơ.");
+        }
     }
 
     public record Context(TemplateVersion version, List<FieldDefinition> fields, List<ValidationRule> rules) {

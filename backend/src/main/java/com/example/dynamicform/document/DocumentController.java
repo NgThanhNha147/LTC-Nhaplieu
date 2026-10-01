@@ -33,6 +33,7 @@ public class DocumentController {
 
     @PostMapping("/{id}/ocr")
     public DocumentOcrService.DocumentOcrResponse startOcr(@PathVariable UUID id) {
+        service.assertCanView(id);
         if (ocrService.prepare(id)) ocrService.enqueue(id);
         return ocrService.status(id, false);
     }
@@ -40,11 +41,13 @@ public class DocumentController {
     @GetMapping("/{id}/ocr")
     public DocumentOcrService.DocumentOcrResponse ocrStatus(@PathVariable UUID id,
                                                              @RequestParam(defaultValue = "false") boolean includeText) {
+        service.assertCanView(id);
         return ocrService.status(id, includeText);
     }
 
     @GetMapping("/{id}/ocr/content")
     public ResponseEntity<org.springframework.core.io.Resource> ocrContent(@PathVariable UUID id) {
+        service.assertCanView(id);
         Path path = ocrService.ocrPdf(id);
         try {
             var resource = new org.springframework.core.io.FileSystemResource(path);

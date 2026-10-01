@@ -1,11 +1,10 @@
 import {
-  CalendarOutlined, DeleteOutlined, EditOutlined, ExportOutlined, EyeOutlined,
-  FilterOutlined, MoreOutlined, PaperClipOutlined, PlusOutlined, SearchOutlined,
+  CalendarOutlined, ExportOutlined, EyeOutlined, FilterOutlined, PaperClipOutlined, SearchOutlined,
 } from "@ant-design/icons";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   App, Button, Card, DatePicker, Dropdown, Empty, Input, Modal,
-  Popover, Segmented, Select, Space, Table, Tag,
+  Popover, Segmented, Select, Table, Tag,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import dayjs, { type Dayjs } from "dayjs";
@@ -15,6 +14,8 @@ import { getErrorMessage } from "../api/client";
 import { recordApi } from "../api/records";
 import { templateApi } from "../api/templates";
 import { PageError, PageLoading } from "../components/ApiState";
+import { Can } from "../auth/Can";
+import { Permissions } from "../auth/permissions";
 import type { DynamicRecord, FieldDefinition, SearchFilter, SearchRequest } from "../types";
 
 type PeriodKey = "ALL" | "TODAY" | "LAST_7_DAYS" | "THIS_MONTH" | "LAST_MONTH" | "CUSTOM";
@@ -90,8 +91,7 @@ function toSearchRequest(draft: FilterDraft, page: number, size: number): Search
 export function RecordsPage() {
   const { templateCode = "" } = useParams();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const { message, modal } = App.useApp();
+  const { message } = App.useApp();
   const [page, setPage] = useState(0);
   const [size, setSize] = useState(20);
   const [draft, setDraft] = useState<FilterDraft>(initialDraft);
@@ -104,11 +104,6 @@ export function RecordsPage() {
   const formQuery = useQuery({ queryKey: ["form", templateCode], queryFn: () => templateApi.form(templateCode), enabled: Boolean(templateCode) });
   const request = useMemo(() => toSearchRequest(applied, page, size), [applied, page, size]);
   const recordsQuery = useQuery({ queryKey: ["records", templateCode, request], queryFn: () => recordApi.search(templateCode, request), enabled: formQuery.isSuccess });
-  const deleteMutation = useMutation({
-    mutationFn: (record: DynamicRecord) => recordApi.remove(templateCode, record.id, record.rowVersion ?? 0),
-    onSuccess: () => { void queryClient.invalidateQueries({ queryKey: ["records", templateCode] }); message.success("Đã xóa bản ghi"); },
-    onError: (error) => message.error(getErrorMessage(error)),
-  });
   const exportMutation = useMutation({
     mutationFn: (exportRequest: SearchRequest) => recordApi.export(templateCode, { ...exportRequest, page: 0, size: 200 }),
     onSuccess: () => message.success("Đã tải file export"),
@@ -137,13 +132,7 @@ export function RecordsPage() {
     { title: "Trạng thái", key: "status", width: 130, render: (_: unknown, record) => recordStatus(record.recordStatus) },
     {
       title: "Thao tác", key: "actions", fixed: "right", width: 150,
-      render: (_: unknown, record) => <Space size={4} onClick={(event) => event.stopPropagation()}>
-        <Button className="compare-action" icon={<EyeOutlined />} onClick={() => navigate(`/workspaces/${templateCode}/records/${record.id}?mode=compare`)}>Mở</Button>
-        <Dropdown trigger={["click"]} menu={{ items: [
-          { key: "edit", icon: <EditOutlined />, label: "Chỉnh sửa", onClick: () => navigate(`/workspaces/${templateCode}/records/${record.id}`) },
-          { key: "delete", danger: true, icon: <DeleteOutlined />, label: "Xóa hồ sơ", onClick: () => modal.confirm({ title: "Xóa hồ sơ này?", content: "Dữ liệu đã xóa không thể khôi phục.", okText: "Xóa", okButtonProps: { danger: true }, onOk: () => deleteMutation.mutateAsync(record) }) },
-        ] }}><Button type="text" icon={<MoreOutlined />} aria-label="Thêm thao tác" /></Dropdown>
-      </Space>,
+      render: (_: unknown, record) => <Button className="compare-action" icon={<EyeOutlined />} onClick={(event) => { event.stopPropagation(); navigate(`/workspaces/${templateCode}/records/${record.id}?mode=compare`); }}>Mở</Button>,
     },
   ];
 
@@ -228,13 +217,12 @@ export function RecordsPage() {
           <Popover trigger="click" placement="bottomRight" open={filterOpen} onOpenChange={setFilterOpen} title="Bộ lọc nâng cao" content={filterPopover}>
             <Button className={`toolbar-icon-button ${applied.status || applied.attachment !== "ALL" || applied.field ? "toolbar-button-active" : ""}`} size="large" icon={<FilterOutlined />} aria-label="Bộ lọc" title="Bộ lọc" />
           </Popover>
-          <Dropdown menu={{ items: [
+          <Can permission={Permissions.RECORD_EXPORT}><Dropdown menu={{ items: [
             { key: "current", label: "Theo bộ lọc hiện tại", onClick: exportCurrent },
             { key: "month", label: "Dữ liệu tháng này", onClick: exportThisMonth },
             { type: "divider" },
             { key: "custom", label: "Chọn khoảng ngày...", onClick: () => setExportRangeOpen(true) },
-          ] }}><Button className="toolbar-action-button" size="large" icon={<ExportOutlined />} loading={exportMutation.isPending}>Xuất Excel</Button></Dropdown>
-          <Button className="toolbar-action-button" size="large" type="primary" icon={<PlusOutlined />} onClick={() => navigate(`/workspaces/${templateCode}/new`)}>Tạo hồ sơ mới</Button>
+          ] }}><Button className="toolbar-action-button" size="large" icon={<ExportOutlined />} loading={exportMutation.isPending}>Xuất Excel</Button></Dropdown></Can>
         </div>
         {hasAppliedFilters && <div className="search-active-summary"><strong>Bộ lọc đang dùng</strong>{applied.period !== "ALL" && <Tag>{periodRange(applied.period, applied.range).filter(Boolean).join(" → ")}</Tag>}{applied.keyword && <Tag color="blue">{applied.keyword}</Tag>}{applied.status && <Tag color="gold">{applied.status === "DRAFT" ? "Đang nhập" : "Đã hoàn tất"}</Tag>}{applied.attachment !== "ALL" && <Tag color="cyan">{applied.attachment === "WITH" ? "Có tài liệu" : "Chưa có tài liệu"}</Tag>}{applied.field && <Tag color="geekblue">Lọc theo trường dữ liệu</Tag>}<Button size="small" type="link" onClick={resetFilters}>Xóa bộ lọc</Button></div>}
       </Card>
@@ -242,7 +230,7 @@ export function RecordsPage() {
       <Card className="record-table-card" styles={{ body: { padding: 0 } }}>
         <Table rowKey="id" loading={recordsQuery.isLoading} columns={columns} dataSource={recordsQuery.data?.items ?? []} scroll={{ x: 1200 }}
           onRow={(record) => ({ onClick: () => navigate(`/workspaces/${templateCode}/records/${record.id}?mode=compare`), style: { cursor: "pointer" } })}
-          locale={{ emptyText: <Empty description="Chưa có hồ sơ phù hợp"><Button type="primary" onClick={() => navigate(`/workspaces/${templateCode}/new`)}>Tạo hồ sơ đầu tiên</Button></Empty> }}
+          locale={{ emptyText: <Empty description="Chưa có hồ sơ phù hợp. Hãy tạo đợt hồ sơ và tải tài liệu để bắt đầu nhập liệu." /> }}
           pagination={{ current: page + 1, pageSize: size, total: recordsQuery.data?.totalElements ?? 0, showSizeChanger: true, showTotal: (total) => `${total} bản ghi`, onChange: (nextPage, nextSize) => { setPage(nextPage - 1); setSize(nextSize); } }} />
       </Card>
 

@@ -49,6 +49,9 @@ import { getErrorMessage } from "../api/client";
 import { templateApi } from "../api/templates";
 import { PageError, PageLoading } from "../components/ApiState";
 import { DynamicFormRenderer } from "../components/DynamicFormRenderer";
+import { Can } from "../auth/Can";
+import { useAuth } from "../auth/AuthProvider";
+import { Permissions } from "../auth/permissions";
 import type { ComponentType, FieldDataType, FieldDefinition, FieldGroup, FormMetadata, MigrationPlan, TemplateStatus, ValidationIssue, ValidationResult } from "../types";
 
 const dataTypes: Array<{ value: FieldDataType; label: string }> = [
@@ -317,6 +320,7 @@ function MigrationPlanCard({ plan, loading, error }: { plan?: MigrationPlan; loa
 }
 
 export function TemplateDesignerPage() {
+  const { hasPermission } = useAuth();
   const { templateId = "" } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -826,13 +830,13 @@ export function TemplateDesignerPage() {
                   <small>{currentVersion?.status === "GENERATED" ? "Đưa biểu mẫu vào sử dụng khi đã kiểm tra xong." : "Kiểm tra trước khi tạo bảng dữ liệu."}</small>
                 </div>
                 <Space wrap className="designer-action-buttons">
-                  <Button icon={<CheckCircleOutlined />} loading={validateMutation.isPending} onClick={() => validateMutation.mutate()}>Kiểm tra</Button>
+                  <Can permission={Permissions.SCHEMA_VALIDATE}><Button icon={<CheckCircleOutlined />} loading={validateMutation.isPending} onClick={() => validateMutation.mutate()}>Kiểm tra</Button></Can>
                   {validation && (
                     <Button danger={!validation.valid} onClick={() => setValidationOpen(true)}>
                       {validation.valid ? "Kết quả kiểm tra" : `${validation.errors.length + validation.warnings.length} mục cần xem`}
                     </Button>
                   )}
-                  <Button
+                  <Can permission={Permissions.SCHEMA_GENERATE}><Button
                     type={currentVersion?.status === "GENERATED" ? "default" : "primary"}
                     icon={<DatabaseOutlined />}
                     disabled={!isEditable || migrationQuery.isLoading || migrationQuery.data?.compatible === false}
@@ -845,8 +849,8 @@ export function TemplateDesignerPage() {
                       okText: "Tạo bảng dữ liệu",
                       onOk: () => generateMutation.mutateAsync(),
                     })}
-                  >Tạo bảng dữ liệu</Button>
-                  <Button
+                  >Tạo bảng dữ liệu</Button></Can>
+                  <Can permission={Permissions.TEMPLATE_PUBLISH}><Button
                     type={currentVersion?.status === "GENERATED" ? "primary" : "default"}
                     className="publish-button"
                     icon={<RocketOutlined />}
@@ -858,14 +862,14 @@ export function TemplateDesignerPage() {
                       okText: "Đưa vào sử dụng",
                       onOk: () => publishMutation.mutateAsync(),
                     })}
-                  >Đưa vào sử dụng</Button>
+                  >Đưa vào sử dụng</Button></Can>
                   <Dropdown
                     trigger={["click"]}
                     menu={{ items: [
                       { key: "migration", icon: <DatabaseOutlined />, label: "Ảnh hưởng dữ liệu", onClick: () => setMigrationOpen(true) },
                       { key: "technical", icon: <CodeOutlined />, label: "Thông tin kỹ thuật", onClick: () => setDdlOpen(true) },
-                       ...(currentVersion?.status === "GENERATED" ? [{ key: "cancel-generated", icon: <DeleteOutlined />, label: "Hủy bảng chưa sử dụng", onClick: () => modal.confirm({ title: "Hủy bảng phiên bản này?", content: "Bảng chưa đưa vào sử dụng sẽ bị xóa; cấu hình vẫn được giữ để bạn tiếp tục sửa.", okText: "Hủy bảng", okButtonProps: { danger: true }, onOk: () => cancelGeneratedMutation.mutateAsync() }) }] : []),
-                       ...(currentVersion?.status === "ARCHIVED" ? [{ key: "storage", icon: <DatabaseOutlined />, label: "Kiểm tra giải phóng bảng cũ", onClick: () => setStorageOpen(true) }] : []),
+                       ...(currentVersion?.status === "GENERATED" && hasPermission(Permissions.SCHEMA_GENERATE) ? [{ key: "cancel-generated", icon: <DeleteOutlined />, label: "Hủy bảng chưa sử dụng", onClick: () => modal.confirm({ title: "Hủy bảng phiên bản này?", content: "Bảng chưa đưa vào sử dụng sẽ bị xóa; cấu hình vẫn được giữ để bạn tiếp tục sửa.", okText: "Hủy bảng", okButtonProps: { danger: true }, onOk: () => cancelGeneratedMutation.mutateAsync() }) }] : []),
+                       ...(currentVersion?.status === "ARCHIVED" && hasPermission(Permissions.SCHEMA_PURGE) ? [{ key: "storage", icon: <DatabaseOutlined />, label: "Kiểm tra giải phóng bảng cũ", onClick: () => setStorageOpen(true) }] : []),
                     ] }}
                   >
                     <Button icon={<MoreOutlined />}>Xem thêm</Button>
@@ -914,7 +918,7 @@ export function TemplateDesignerPage() {
         <MigrationPlanCard plan={migrationQuery.data} loading={migrationQuery.isLoading} error={migrationQuery.error} />
       </Drawer>
 
-      <Modal title="Kiểm tra giải phóng bảng phiên bản cũ" open={storageOpen} onCancel={() => setStorageOpen(false)} footer={<Space><Button onClick={() => setStorageOpen(false)}>Đóng</Button><Button danger type="primary" disabled={!storageQuery.data?.eligible} loading={purgeArchivedMutation.isPending} onClick={() => purgeArchivedMutation.mutate()}>Giải phóng bảng</Button></Space>}>
+      <Modal title="Kiểm tra giải phóng bảng phiên bản cũ" open={storageOpen} onCancel={() => setStorageOpen(false)} footer={<Space><Button onClick={() => setStorageOpen(false)}>Đóng</Button><Can permission={Permissions.SCHEMA_PURGE}><Button danger type="primary" disabled={!storageQuery.data?.eligible} loading={purgeArchivedMutation.isPending} onClick={() => purgeArchivedMutation.mutate()}>Giải phóng bảng</Button></Can></Space>}>
         {storageQuery.isLoading ? <Spin /> : storageQuery.isError ? <Alert type="error" message={getErrorMessage(storageQuery.error)} /> : storageQuery.data && <div className="storage-check-panel"><Alert type={storageQuery.data.eligible ? "success" : "warning"} showIcon message={storageQuery.data.eligible ? "Có thể giải phóng an toàn" : "Chưa đủ điều kiện giải phóng"} description={storageQuery.data.blockers.length ? storageQuery.data.blockers.join(" ") : "Mọi hồ sơ từ phiên bản cũ đều đã tồn tại ở phiên bản đang sử dụng."} /><div className="migration-counts"><span><strong>{storageQuery.data.sourceRecordCount}</strong><small>Phiên bản cũ</small></span><span><strong>{storageQuery.data.currentRecordCount}</strong><small>Đang sử dụng</small></span><span><strong>{storageQuery.data.missingRecordCount}</strong><small>Chưa chuyển</small></span></div></div>}
       </Modal>
 

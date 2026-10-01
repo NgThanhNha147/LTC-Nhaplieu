@@ -11,6 +11,8 @@ import { useNavigate } from "react-router-dom";
 import { getErrorMessage } from "../api/client";
 import { templateApi } from "../api/templates";
 import { PageError, PageLoading } from "../components/ApiState";
+import { Can } from "../auth/Can";
+import { Permissions } from "../auth/permissions";
 
 export function WorkspacesPage() {
   const navigate = useNavigate();
@@ -38,7 +40,7 @@ export function WorkspacesPage() {
         <Input
           allowClear
           prefix={<SearchOutlined />}
-          placeholder="Tìm loại hồ sơ..."
+          placeholder="Tìm mẫu hồ sơ..."
           value={search}
           onChange={(event) => setSearch(event.target.value)}
         />
@@ -46,7 +48,7 @@ export function WorkspacesPage() {
 
       {filteredTemplates.length === 0 ? (
         <div className="surface-card workspace-empty">
-          <Empty description={publishedTemplates.length ? "Không tìm thấy loại hồ sơ phù hợp" : "Chưa có loại hồ sơ nào sẵn sàng sử dụng"} />
+          <Empty description={publishedTemplates.length ? "Không tìm thấy mẫu hồ sơ phù hợp" : "Chưa có mẫu hồ sơ nào sẵn sàng sử dụng"} />
         </div>
       ) : (
         <Row gutter={[18, 18]}>
@@ -54,12 +56,13 @@ export function WorkspacesPage() {
             <Col xs={24} md={12} xl={8} key={template.id}>
               <Card className="workspace-card">
                 <div className="workspace-card-icon"><DatabaseOutlined /></div>
+                <div className="workspace-card-code">{template.code} · PHIÊN BẢN {template.currentVersion ?? "—"}</div>
                 <h2>{template.name}</h2>
-                <p>{template.description || "Nhập và quản lý dữ liệu hồ sơ."}</p>
+                <p>{template.description || "Tiếp nhận theo đợt, nhập liệu và phê duyệt hồ sơ theo mẫu này."}</p>
                 <div className="workspace-card-actions">
-                  <Button icon={<DatabaseOutlined />} onClick={() => navigate(`/workspaces/${template.code}`)}>Danh sách hồ sơ</Button>
-                  <Button type="primary" icon={<FileAddOutlined />} onClick={() => navigate(`/workspaces/${template.code}/new`)}>
-                    Tạo hồ sơ mới <RightOutlined />
+                  <Can permission={Permissions.BATCH_CREATE}><Button icon={<FileAddOutlined />} onClick={() => navigate(`/workspaces/${template.code}?tab=batches&create=1`)}>Tạo đợt hồ sơ</Button></Can>
+                  <Button type="primary" icon={<DatabaseOutlined />} onClick={() => navigate(`/workspaces/${template.code}`)}>
+                    Mở mẫu <RightOutlined />
                   </Button>
                 </div>
               </Card>

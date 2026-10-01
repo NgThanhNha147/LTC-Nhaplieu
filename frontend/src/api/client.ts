@@ -1,10 +1,57 @@
 import axios, { AxiosError } from "axios";
 import type { ApiErrorBody, PageResult } from "../types";
+import { clearAccessToken, getAccessToken, notifyUnauthorized, securityEnabled, setAccessToken } from "../auth/authSession";
 
 export const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || "/api/v1",
   timeout: 30_000,
+  withCredentials: true,
   headers: { "Content-Type": "application/json" },
+});
+
+apiClient.interceptors.request.use((config) => {
+  const token = getAccessToken();
+  if (securityEnabled && token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
+
+interface RetryableRequest {
+  _authRetry?: boolean;
+  url?: string;
+}
+
+let refreshRequest: Promise<string> | null = null;
+
+async function refreshAccessToken(): Promise<string> {
+  if (!refreshRequest) {
+    refreshRequest = axios.post(
+      `${apiClient.defaults.baseURL}/auth/refresh`,
+      {},
+      { withCredentials: true, timeout: 15_000 },
+    ).then((response) => {
+      const result = unwrap<{ accessToken: string }>(response.data);
+      setAccessToken(result.accessToken);
+      return result.accessToken;
+    }).finally(() => { refreshRequest = null; });
+  }
+  return refreshRequest;
+}
+
+apiClient.interceptors.response.use(undefined, async (error: AxiosError) => {
+  const request = error.config as (typeof error.config & RetryableRequest);
+  const isAuthEndpoint = request?.url?.includes("/auth/login") || request?.url?.includes("/auth/refresh");
+  if (securityEnabled && error.response?.status === 401 && request && !request._authRetry && !isAuthEndpoint) {
+    request._authRetry = true;
+    try {
+      const token = await refreshAccessToken();
+      request.headers?.set("Authorization", `Bearer ${token}`);
+      return apiClient.request(request);
+    } catch {
+      clearAccessToken();
+      notifyUnauthorized();
+    }
+  }
+  return Promise.reject(error);
 });
 
 // Keeps screens independent from whether Spring returns a direct body or { data: ... }.

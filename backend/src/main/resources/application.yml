@@ -23,21 +23,44 @@ spring:
       password: ${APP_PASSWORD:admin}
   servlet:
     multipart:
-      max-file-size: ${MAX_FILE_SIZE:25MB}
-      max-request-size: ${MAX_REQUEST_SIZE:25MB}
+      max-file-size: ${MAX_FILE_SIZE:1GB}
+      max-request-size: ${MAX_REQUEST_SIZE:1GB}
 
 server:
   port: ${SERVER_PORT:8080}
   error:
     include-message: never
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+
 app:
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173}
   security:
-    enabled: ${APP_SECURITY_ENABLED:false}
+    enabled: ${APP_SECURITY_ENABLED:true}
+    jwt-secret: ${JWT_SECRET:local-development-secret-change-before-production-2026}
+    access-token-minutes: ${JWT_ACCESS_TOKEN_MINUTES:15}
+    refresh-token-days: ${JWT_REFRESH_TOKEN_DAYS:7}
+    refresh-cookie-secure: ${JWT_REFRESH_COOKIE_SECURE:false}
+    initial-admin:
+      enabled: ${INITIAL_ADMIN_ENABLED:false}
+      username: ${INITIAL_ADMIN_USERNAME:admin}
+      password: ${INITIAL_ADMIN_PASSWORD:ChangeMe123!}
+      display-name: ${INITIAL_ADMIN_DISPLAY_NAME:Quan tri he thong}
   storage:
     path: ${DOCUMENT_STORAGE_PATH:./data/documents}
+    max-file-bytes: ${DOCUMENT_MAX_FILE_BYTES:52428800}
+  batch:
+    max-files: ${BATCH_MAX_FILES:1000}
+    max-file-bytes: ${BATCH_MAX_FILE_BYTES:52428800}
+    max-total-bytes: ${BATCH_MAX_TOTAL_BYTES:1073741824}
   ocr:
     enabled: ${OCR_ENABLED:false}
     service-url: ${OCR_SERVICE_URL:http://localhost:8090}

@@ -105,6 +105,7 @@ public class SchemaGeneratorService {
             version.setConfigHash(currentHash);
         }
         if (!Objects.equals(version.getConfigHash(), currentHash)) throw ApiException.conflict("Cấu hình trường đã thay đổi sau khi tạo bảng. Hãy kiểm tra và tạo lại bảng dữ liệu.");
+        assertPreviousVersionClosed(version);
         synchronizeBeforePublish(version);
         version.setStatus(VersionStatus.PUBLISHED);
         version.setPublishedAt(Instant.now());
@@ -117,6 +118,20 @@ public class SchemaGeneratorService {
         return version;
     }
 
+    private void assertPreviousVersionClosed(TemplateVersion target) {
+        TemplateVersion current = versions.findFirstByTemplateCodeIgnoreCaseAndStatusOrderByVersionNoDesc(
+                target.getTemplate().getCode(), VersionStatus.PUBLISHED).orElse(null);
+        if (current == null || current.getId().equals(target.getId())) return;
+        Long activeBatches = jdbc.queryForObject("""
+                SELECT COUNT(*) FROM app_meta.ingestion_batch
+                WHERE template_version_id = ? AND archived_at IS NULL
+                """, Long.class, current.getId());
+        if (activeBatches != null && activeBatches > 0) {
+            throw ApiException.conflict("Phiên bản đang sử dụng còn " + activeBatches
+                    + " đợt hồ sơ chưa lưu trữ. Hãy hoàn tất, phê duyệt và lưu trữ các đợt trước khi phát hành phiên bản mới.");
+        }
+    }
+
     @Transactional(readOnly = true)
     public StorageCheck storageCheck(UUID versionId) {
         TemplateVersion version = templateService.requireVersion(versionId);
@@ -124,6 +139,10 @@ public class SchemaGeneratorService {
         if (version.getStatus() == VersionStatus.PUBLISHED) blockers.add("Không thể giải phóng phiên bản đang được sử dụng.");
         if (version.getStatus() != VersionStatus.ARCHIVED) blockers.add("Chỉ phiên bản cũ đã lưu trữ mới được giải phóng bảng.");
         if (version.getPhysicalSchema() == null || version.getPhysicalTable() == null) blockers.add("Phiên bản chưa có bảng dữ liệu để giải phóng.");
+        Long referencedBatches = jdbc.queryForObject("SELECT COUNT(*) FROM app_meta.ingestion_batch WHERE template_version_id = ?", Long.class, versionId);
+        if (referencedBatches != null && referencedBatches > 0) {
+            blockers.add("Phiên bản đang được " + referencedBatches + " đợt hồ sơ sử dụng nên chưa thể giải phóng bảng dữ liệu.");
+        }
         TemplateVersion current = versions.findFirstByTemplateCodeIgnoreCaseAndStatusOrderByVersionNoDesc(version.getTemplate().getCode(), VersionStatus.PUBLISHED).orElse(null);
         if (current == null) blockers.add("Biểu mẫu chưa có phiên bản đang sử dụng để đối chiếu.");
         long sourceCount = 0, currentCount = 0, missing = 0;

@@ -1,0 +1,196 @@
+name: Security scans
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "17 18 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  filesystem:
+    name: Source and dependency scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Scan repository with Trivy
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,secret,misconfig
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          skip-dirs: .git,.tools,.ui-check,backups,frontend/node_modules,frontend/dist,backend/target
+          exit-code: "1"
+          format: sarif
+          output: trivy-results.sarif
+      - name: Upload Trivy SARIF
+        if: always() && hashFiles('trivy-results.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-results.sarif
+
+  frontend-audit:
+    name: Frontend dependency audit
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - name: Fail on high or critical vulnerabilities
+        run: npm audit --audit-level=high
+
+  backend-dependency-check:
+    name: Backend OWASP dependency check
+    runs-on: ubuntu-latest
+    env:
+      NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      - name: Run OWASP Dependency-Check when NVD key is configured
+        working-directory: backend
+        shell: bash
+        run: |
+          if [[ -z "$NVD_API_KEY" ]]; then
+            echo "NVD_API_KEY is not configured; Trivy remains the required SCA gate."
+            exit 0
+          fi
+          mvn --batch-mode --no-transfer-progress \
+            org.owasp:dependency-check-maven:check \
+            -DnvdApiKey="$NVD_API_KEY" \
+            -DfailBuildOnCVSS=7 \
+            -DsuppressionFile=../security/dependency-check-suppressions.xml
+
+  container-images:
+    name: Container image scan
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: dynamic-form-backend:scan
+            context: backend
+          - image: dynamic-form-frontend:scan
+            context: frontend
+          - image: dynamic-form-ocr:scan
+            context: ocr
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build ${{ matrix.image }}
+        run: docker build -t "${{ matrix.image }}" "${{ matrix.context }}"
+      - name: Scan ${{ matrix.image }}
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ matrix.image }}
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+          format: table
+
+  sonar:
+    name: SonarQube quality gate
+    runs-on: ubuntu-latest
+    env:
+      SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Build sources and run tests
+        shell: bash
+        run: |
+          (cd backend && mvn --batch-mode --no-transfer-progress verify)
+          (cd frontend && npm ci && npm run build)
+      - name: Run SonarQube when configured
+        shell: bash
+        run: |
+          if [[ -z "$SONAR_HOST_URL" || -z "$SONAR_TOKEN" ]]; then
+            echo "SONAR_HOST_URL/SONAR_TOKEN are not configured; skipping external SonarQube analysis."
+            exit 0
+          fi
+          docker run --rm \
+            -e SONAR_HOST_URL="$SONAR_HOST_URL" \
+            -e SONAR_TOKEN="$SONAR_TOKEN" \
+            -v "$PWD:/usr/src" \
+            sonarsource/sonar-scanner-cli:11
+
+  sbom:
+    name: Generate source SBOM
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate CycloneDX SBOM
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln
+          skip-dirs: .git,.tools,.ui-check,backups,frontend/node_modules,frontend/dist,backend/target
+          format: cyclonedx
+          output: ltc-nhaplieu-sbom.cdx.json
+          exit-code: "0"
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: ltc-nhaplieu-sbom
+          path: ltc-nhaplieu-sbom.cdx.json
+          retention-days: 30
+
+  dast:
+    name: Staging DAST
+    runs-on: ubuntu-latest
+    env:
+      STAGING_BASE_URL: ${{ secrets.STAGING_BASE_URL }}
+    steps:
+      - name: Run OWASP ZAP baseline when staging URL is configured
+        shell: bash
+        run: |
+          if [[ -z "$STAGING_BASE_URL" ]]; then
+            echo "STAGING_BASE_URL is not configured; skipping DAST."
+            exit 0
+          fi
+          docker run --rm --network host \
+            -t zaproxy/zap-stable \
+            zap-baseline.py -t "$STAGING_BASE_URL" -I -m 5

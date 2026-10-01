@@ -18,7 +18,7 @@ jobs:
     name: Secret scan
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - name: Run Gitleaks
@@ -30,7 +30,7 @@ jobs:
     name: Source and dependency scan
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Scan repository with Trivy
         uses: aquasecurity/trivy-action@v0.36.0
         with:
@@ -44,10 +44,11 @@ jobs:
           skip-files: backend/pom.xml
           exit-code: "1"
           format: sarif
+          limit-severities-for-sarif: true
           output: trivy-results.sarif
       - name: Upload Trivy SARIF
         if: always() && hashFiles('trivy-results.sarif') != ''
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: trivy-results.sarif
 
@@ -58,7 +59,7 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
@@ -74,7 +75,7 @@ jobs:
     env:
       NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -108,7 +109,7 @@ jobs:
           - image: dynamic-form-ocr:scan
             context: ocr
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Build ${{ matrix.image }}
         run: docker build --pull -t "${{ matrix.image }}" "${{ matrix.context }}"
       - name: Scan ${{ matrix.image }}
@@ -127,7 +128,7 @@ jobs:
       SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - uses: actions/setup-java@v4
@@ -162,7 +163,7 @@ jobs:
     name: Generate source SBOM
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Generate CycloneDX SBOM
         uses: aquasecurity/trivy-action@v0.36.0
         with:

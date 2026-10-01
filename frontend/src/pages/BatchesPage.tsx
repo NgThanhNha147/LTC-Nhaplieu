@@ -124,11 +124,12 @@ export function BatchesPage({ mine = false, template, startCreate = false }: Bat
   return <div className="batch-page batch-page-inline">
     <div className="batch-command-section">
       <div className="batch-command-row">
-        <div><strong>{mine ? "Đợt hồ sơ của tôi" : template ? `Đợt hồ sơ của ${template.name}` : "Quản lý đợt hồ sơ"}</strong><small>{mine ? "Theo dõi tiến độ và tiếp tục hồ sơ đang làm." : selfServiceEntry ? "Tạo đợt, tải tài liệu và bắt đầu nhập dữ liệu của bạn." : "Tiếp nhận tài liệu, giao việc và theo dõi tiến độ từng đợt."}</small></div>
         <div className="batch-command-actions">
-          <Input allowClear prefix={<SearchOutlined />} placeholder="Tìm theo tên hoặc mã đợt" value={keyword} onChange={(event) => setKeyword(event.target.value)} onPressEnter={() => setAppliedKeyword(keyword.trim())} />
-          <Button icon={<SearchOutlined />} onClick={() => setAppliedKeyword(keyword.trim())}>Tìm</Button>
-          {!mine && hasPermission(Permissions.BATCH_CREATE) && <Button type="primary" icon={<PlusOutlined />} disabled={Boolean(template && !template.currentVersionId)} onClick={() => setCreateOpen(true)}>{selfServiceEntry ? "Tạo đợt của tôi" : "Tạo đợt"}</Button>}
+          <div className="batch-search-actions">
+            <Input allowClear prefix={<SearchOutlined />} placeholder="Tìm theo tên hoặc mã đợt" value={keyword} onChange={(event) => setKeyword(event.target.value)} onPressEnter={() => setAppliedKeyword(keyword.trim())} />
+            <Button aria-label="Tìm kiếm" icon={<SearchOutlined />} onClick={() => setAppliedKeyword(keyword.trim())} />
+          </div>
+          {!mine && hasPermission(Permissions.BATCH_CREATE) && <Button className="batch-create-button" type="primary" icon={<PlusOutlined />} disabled={Boolean(template && !template.currentVersionId)} onClick={() => setCreateOpen(true)}>{selfServiceEntry ? "Tạo đợt của tôi" : "Tạo đợt"}</Button>}
         </div>
       </div>
     </div>

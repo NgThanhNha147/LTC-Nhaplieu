@@ -175,7 +175,7 @@ jobs:
           output: ltc-nhaplieu-sbom.cdx.json
           exit-code: "0"
       - name: Upload SBOM
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: ltc-nhaplieu-sbom
           path: ltc-nhaplieu-sbom.cdx.json

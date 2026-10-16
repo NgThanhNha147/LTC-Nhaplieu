@@ -329,3 +329,68 @@ export interface WorkItemSearch {
   page?: number;
   size?: number;
 }
+
+export type DocumentAnalysisStatus = "PROCESSING" | "COMPLETED" | "REVIEWED" | "PROMOTED" | "FAILED";
+export type DocumentSourceKind = "ACROFORM" | "DIGITAL_TEXT" | "SCAN_TEXT" | "IMAGE" | "UNKNOWN";
+
+export interface SuggestedDocumentField {
+  id: string;
+  fieldCode: string;
+  label: string;
+  dataType: FieldDataType;
+  componentType: ComponentType;
+  value?: string;
+  confidence?: number;
+  page?: number;
+  evidence?: string;
+  required: boolean;
+  selected: boolean;
+}
+
+export interface SuggestedDocumentGroup {
+  code: string;
+  label: string;
+  displayOrder: number;
+  fields: SuggestedDocumentField[];
+}
+
+export interface SuggestedDocumentForm {
+  groups: SuggestedDocumentGroup[];
+}
+
+export interface DocumentTemplateMatch {
+  templateId: string;
+  versionId: string;
+  templateCode: string;
+  templateName: string;
+  versionNo: number;
+  confidence: number;
+}
+
+export interface DocumentAnalysisResult {
+  id: string;
+  documentId: string;
+  documentName: string;
+  documentUrl: string;
+  status: DocumentAnalysisStatus;
+  sourceKind?: DocumentSourceKind;
+  documentType?: string;
+  confidence?: number;
+  suggestedForm: SuggestedDocumentForm;
+  reviewedForm?: SuggestedDocumentForm;
+  templateMatch?: DocumentTemplateMatch;
+  draftRecordId?: string;
+  errorMessage?: string;
+  rowVersion: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface PromoteAnalysisResult {
+  templateId: string;
+  versionId: string;
+  templateCode: string;
+  templateName: string;
+  groupCount: number;
+  fieldCount: number;
+}

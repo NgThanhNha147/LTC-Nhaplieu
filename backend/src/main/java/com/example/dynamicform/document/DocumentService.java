@@ -118,7 +118,7 @@ public class DocumentService {
         } catch (java.net.MalformedURLException e) { throw new IllegalStateException("Không thể đọc file", e); }
     }
 
-    void assertCanView(UUID documentId) {
+    public void assertCanView(UUID documentId) {
         if (!securityEnabled) return;
         String username = currentUser.username();
         if (security.hasFunction(username, "BATCH_ASSIGN")
@@ -128,9 +128,10 @@ public class DocumentService {
         }
         UUID userId = security.findUserByUsername(username).map(SecurityRepository.UserRow::id)
                 .orElseThrow(() -> ApiException.forbidden("Không xác định được tài khoản hiện tại."));
-        if (!batchDocuments.existsByDocumentFileIdAndDeletedFalseAndAssignedUserId(documentId, userId)) {
-            throw ApiException.notFound("Không tìm thấy tài liệu hoặc tài liệu không thuộc hồ sơ được giao.");
-        }
+        if (batchDocuments.existsByDocumentFileIdAndDeletedFalseAndAssignedUserId(documentId, userId)) return;
+        if (repository.findById(documentId).map(DocumentFile::getCreatedBy)
+                .filter(username::equalsIgnoreCase).isPresent()) return;
+        throw ApiException.notFound("Không tìm thấy tài liệu hoặc tài liệu không thuộc hồ sơ được giao.");
     }
 
     private String checksum(Path path) throws IOException {

@@ -64,6 +64,10 @@ app:
   ocr:
     enabled: ${OCR_ENABLED:false}
     service-url: ${OCR_SERVICE_URL:http://localhost:8090}
+  document-analysis:
+    scan-recognition-enabled: ${DOCUMENT_ANALYSIS_SCAN_ENABLED:true}
+    minimum-digital-text-length: ${DOCUMENT_ANALYSIS_MIN_TEXT_LENGTH:80}
+    max-text-characters: ${DOCUMENT_ANALYSIS_MAX_TEXT_CHARACTERS:200000}
   export:
     max-rows: ${EXPORT_MAX_ROWS:10000}
 

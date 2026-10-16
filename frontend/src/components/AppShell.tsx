@@ -13,6 +13,7 @@ import {
   UserOutlined,
   FolderOpenOutlined,
   FormOutlined,
+  FileSearchOutlined,
   CheckCircleOutlined,
   HomeOutlined,
 } from "@ant-design/icons";
@@ -43,8 +44,9 @@ export function AppShell() {
   const inWorkQueue = location.pathname.startsWith("/my-work") || location.pathname.startsWith("/work-items");
   const inApprovals = location.pathname.startsWith("/approvals");
   const inOverview = location.pathname.startsWith("/overview");
-  const contextTitle = inOverview ? "Tổng quan" : inApprovals ? "Phê duyệt hồ sơ" : inWorkQueue ? "Việc của tôi" : inWorkspaces ? "Mẫu hồ sơ" : inBatches ? "Đợt hồ sơ" : inAudit ? "Nhật ký hệ thống" : inBackups ? "Sao lưu và phục hồi" : inUsers ? "Quản lý người dùng" : inRoles ? "Vai trò và quyền" : inLookups ? "Danh mục dùng chung" : inTemplates ? "Cấu hình biểu mẫu" : "Mẫu hồ sơ";
-  const fallbackSelectedKey = inOverview ? "overview" : inApprovals ? "approvals" : inWorkQueue ? "my-work" : inWorkspaces ? "records" : inBatches ? "records" : inAudit ? "audit" : inBackups ? "backups" : inUsers ? "users" : inRoles ? "roles" : inLookups ? "lookups" : inTemplates ? "templates" : "records";
+  const inDocumentIntake = location.pathname.startsWith("/document-intake");
+  const contextTitle = inDocumentIntake ? "Phân tích tài liệu" : inOverview ? "Tổng quan" : inApprovals ? "Phê duyệt hồ sơ" : inWorkQueue ? "Việc của tôi" : inWorkspaces ? "Mẫu hồ sơ" : inBatches ? "Đợt hồ sơ" : inAudit ? "Nhật ký hệ thống" : inBackups ? "Sao lưu và phục hồi" : inUsers ? "Quản lý người dùng" : inRoles ? "Vai trò và quyền" : inLookups ? "Danh mục dùng chung" : inTemplates ? "Cấu hình biểu mẫu" : "Mẫu hồ sơ";
+  const fallbackSelectedKey = inDocumentIntake ? "document-intake" : inOverview ? "overview" : inApprovals ? "approvals" : inWorkQueue ? "my-work" : inWorkspaces ? "records" : inBatches ? "records" : inAudit ? "audit" : inBackups ? "backups" : inUsers ? "users" : inRoles ? "roles" : inLookups ? "lookups" : inTemplates ? "templates" : "records";
   const assignedMenu = user?.menus ?? [];
   const activeAssignedMenu = assignedMenu.find((item) => item.path && location.pathname.startsWith(item.path));
   const selectedKey = securityEnabled ? activeAssignedMenu?.code.toLowerCase() ?? "" : fallbackSelectedKey;
@@ -70,6 +72,7 @@ export function AppShell() {
 
   const operationItems = [
     hasPermission(Permissions.BATCH_VIEW) ? { key: "overview", icon: <HomeOutlined />, label: "Tổng quan", onClick: () => { navigate("/overview"); setMobileOpen(false); } } : null,
+    hasPermission(Permissions.DOCUMENT_ANALYZE) ? { key: "document-intake", icon: <FileSearchOutlined />, label: "Phân tích tài liệu", onClick: () => { navigate("/document-intake"); setMobileOpen(false); } } : null,
     hasPermission(Permissions.RECORD_VIEW) ? { key: "records", icon: <DatabaseOutlined />, label: "Mẫu hồ sơ", onClick: goToWorkspaces } : null,
     hasPermission(Permissions.BATCH_VIEW) ? { key: "my-work", icon: <FormOutlined />, label: "Việc của tôi", onClick: () => { navigate("/my-work"); setMobileOpen(false); } } : null,
     hasPermission(Permissions.RECORD_APPROVE) ? { key: "approvals", icon: <CheckCircleOutlined />, label: "Chờ duyệt", onClick: () => { navigate("/approvals"); setMobileOpen(false); } } : null,
@@ -95,6 +98,7 @@ export function AppShell() {
     if (/home|overview|dashboard/i.test(icon)) return <HomeOutlined />;
     if (/batch|folder/i.test(icon)) return <FolderOpenOutlined />;
     if (/entry|work|form/i.test(icon)) return <FormOutlined />;
+    if (/file.*search|document.*intake|analy/i.test(icon)) return <FileSearchOutlined />;
     return <AppstoreOutlined />;
   };
   const mapAssignedMenu = (menu: AuthMenu): MenuItem => {

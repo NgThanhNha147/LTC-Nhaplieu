@@ -17,6 +17,7 @@ public interface TemplateVersionRepository extends JpaRepository<TemplateVersion
     Optional<TemplateVersion> findFirstByTemplateCodeIgnoreCaseAndStatusOrderByVersionNoDesc(String code, VersionStatus status);
     Optional<TemplateVersion> findFirstByTemplateCodeIgnoreCaseOrderByVersionNoDesc(String code);
     Optional<TemplateVersion> findByTemplateCodeIgnoreCaseAndVersionNo(String code, Integer versionNo);
+    List<TemplateVersion> findByStatus(VersionStatus status);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select v from TemplateVersion v where v.id = :id")

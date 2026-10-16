@@ -22,6 +22,7 @@ const BackupsPage = lazy(() => import("./pages/BackupsPage").then((module) => ({
 const BatchDetailPage = lazy(() => import("./pages/BatchDetailPage").then((module) => ({ default: module.BatchDetailPage })));
 const BatchWorkItemPage = lazy(() => import("./pages/BatchWorkItemPage").then((module) => ({ default: module.BatchWorkItemPage })));
 const WorkQueuePage = lazy(() => import("./pages/WorkQueuePage").then((module) => ({ default: module.WorkQueuePage })));
+const DocumentIntakePage = lazy(() => import("./pages/DocumentIntakePage").then((module) => ({ default: module.DocumentIntakePage })));
 
 function AuthorizedHome() {
   const { hasPermission } = useAuth();
@@ -60,6 +61,7 @@ export default function App() {
               <Route path="/workspaces/:templateCode" element={<TemplateWorkspacePage />} />
               <Route path="/workspaces/:templateCode/new" element={<LegacyRecordCreateRedirect />} />
             </Route>
+            <Route element={<PermissionRoute permission={Permissions.DOCUMENT_ANALYZE} />}><Route path="/document-intake" element={<DocumentIntakePage />} /></Route>
             <Route element={<PermissionRoute permission={Permissions.RECORD_EXPORT} />}><Route path="/workspaces/:templateCode/records/:recordId" element={<DataEntryPage />} /></Route>
             <Route element={<PermissionRoute permission={Permissions.BATCH_VIEW} />}>
               <Route path="/my-batches" element={<Navigate to="/workspaces" replace />} />

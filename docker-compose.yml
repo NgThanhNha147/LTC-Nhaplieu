@@ -47,6 +47,7 @@ services:
       INITIAL_ADMIN_DISPLAY_NAME: ${INITIAL_ADMIN_DISPLAY_NAME:-Quan tri he thong}
       OCR_ENABLED: ${OCR_ENABLED:-false}
       OCR_SERVICE_URL: ${OCR_SERVICE_URL:-http://ocr:8090}
+      DOCUMENT_ANALYSIS_SCAN_ENABLED: ${DOCUMENT_ANALYSIS_SCAN_ENABLED:-true}
     ports:
       - "${BACKEND_PORT:-8080}:8080"
     volumes:
